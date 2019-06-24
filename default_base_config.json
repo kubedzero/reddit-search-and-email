@@ -1,0 +1,14 @@
+{
+    "searches":[
+
+    ],
+    "praw_client_id":"yourApiKeyHere",
+    "praw_client_secret":"yourSecretKeyHere",
+    "logging":[
+        {
+            "file_log_level":"INFO",
+            "console_log_level":"INFO",
+            "file_log_filepath":"./log_output.log"
+        }
+    ]
+}

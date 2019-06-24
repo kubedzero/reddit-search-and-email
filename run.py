@@ -15,39 +15,39 @@ from threading import RLock
 # https://docs.python.org/3/library/logging.html#logging.Formatter
 # https://docs.python.org/3/library/time.html#time.strftime
 
-LOG_FILE = "reddit-search-and-email.log"
-LOG_LEVEL_FILE = "INFO"
-LOG_LEVEL_CONSOLE = "DEBUG"
-
-logger_instance = get_logger_with_name("core", LOG_LEVEL_CONSOLE, LOG_FILE, LOG_LEVEL_FILE)
 # Chosen from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 local_timezone = 'America/Los_Angeles'
-logger_instance.debug('Setting local timezone to ' + local_timezone)
 to_zone = pytz.timezone(local_timezone)
 
 def main():
-    logger_instance.warning('Starting up... File log level set to [%s] and Console to [%s]',
-                            LOG_LEVEL_FILE, LOG_LEVEL_CONSOLE)
+    # read in configs
+    configuration = JsonConfig(["./personal_config.json","./default_base_config.json"])
+    file_log_level = configuration.get_config_value("logging.file_log_level")
+    console_log_level = configuration.get_config_value("logging.console_log_level")
+    file_log_filepath = configuration.get_config_value("logging.file_log_filepath")
+    logger_instance = get_logger_with_name("core", console_log_level, file_log_filepath, file_log_level)
 
-    logger_instance.info('Initializing PRAW instance')
+    logger_instance.info('Initializing PRAW instance...')
     # `client_id` and `client_secret` are retrieved from the praw.ini file#
     # TODO move this to a config
-    reddit = praw.Reddit(user_agent='reddit-search-and-email')
+    reddit = praw.Reddit(configuration.get_config_value("praw_client_id"),
+                         configuration.get_config_value("praw_client_secret"),
+                         user_agent='reddit-search-and-email')
 
     # define the results dictionary
     search_dict = {}  # could also say = dict()
     # TODO change searches to happen in a loop (maybe store output dicts, maybe not?
     # TODO move search params to config
-    run_search(reddit, search_dict, 'Search 1', 'redditdev+learnpython',
+    run_search(logger_instance, reddit, search_dict, 'Search 1', 'redditdev+learnpython',
         'title:"PRAW')
-    run_search(reddit, search_dict, 'Search 2', 'redditdev',
+    run_search(logger_instance, reddit, search_dict, 'Search 2', 'redditdev',
         'title:Python')
     # delete any entries in the results dictionary whose submission IDs are listed in the already_returned file
     # format the email output
 
 
 
-def run_search(reddit, search_dict, search_name, subreddits, search_string):
+def run_search(logger_instance, reddit, search_dict, search_name, subreddits, search_string):
     # Define a temporary multireddit and perform a search as documented on https://praw.readthedocs.io/en/latest/code_overview/reddit/subreddits.html
     searchListingGenerator = reddit.subreddit(subreddits).search(search_string,sort='new',time_filter='week')
     # make sure a nested submission dict exists in the value of the search dict https://www.programiz.com/python-programming/nested-dictionary

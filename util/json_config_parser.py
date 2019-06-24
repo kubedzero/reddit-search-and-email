@@ -62,8 +62,8 @@ class JsonConfig:
     def __bootstrap_logger(self):
         self._logger_instance.info("Attempting to bootstrap JSON config parser logger with config values")
         config_console_log_level = self.get_config_value("logging.console_log_level")
-        config_file_log_level = self.get_config_value("file_log_level")
-        config_file_log_filepath = self.get_config_value("file_log_filepath")
+        config_file_log_level = self.get_config_value("logging.file_log_level")
+        config_file_log_filepath = self.get_config_value("logging.file_log_filepath")
         self._logger_instance = get_logger_with_name(self._LOG_NAME, config_console_log_level, config_file_log_filepath,
                                                      config_file_log_level)
 
@@ -84,4 +84,5 @@ class JsonConfig:
                 # Add a new tuple to the config values list
                 self._config_tuples.append((filename, json.load(file_data)))
         self.__bootstrap_logger()
-        self._logger_instance.debug("Ingested Config files are: {}".format(print(self._config_tuples)))
+        self._logger_instance.debug("Ingested Config files are: {}".format(self._config_tuples))
+        self._logger_instance.info("Config files successfully ingested!")
