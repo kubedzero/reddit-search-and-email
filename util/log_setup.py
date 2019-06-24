@@ -28,9 +28,7 @@ def get_logger_with_name(log_name, log_level_console="INFO", log_filename="", lo
     # set the root logger to the lowest level so its handlers set logging limits instead
     logger.setLevel(logging.DEBUG)
     logger.addHandler(get_console_handler(log_level_console))
-    if log_filename == "":
-        logger.warning("Skipping a file log handler as a filename was not defined")
-    else:
+    if not log_filename == "":
         logger.info("Adding handler for log file %s with log level %s",log_filename, log_level_file)
         logger.addHandler(get_file_handler(log_filename, log_level_file))
     # with this pattern, it's rarely necessary to propagate the error up to parent
