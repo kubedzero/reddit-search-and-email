@@ -1,6 +1,10 @@
 {
     "searches":[
-
+        {
+            "search_name":"first search",
+            "subreddits":"redditdev+learnpython",
+            "search_params":"title:PRAW"
+        }
     ],
     "praw_client_id":"yourApiKeyHere",
     "praw_client_secret":"yourSecretKeyHere",

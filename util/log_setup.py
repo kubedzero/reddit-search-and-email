@@ -34,6 +34,6 @@ def get_logger_with_name(log_name, log_level_console="INFO", log_filename="", lo
         logger.removeHandler(handler)
     logger.addHandler(get_console_handler(log_level_console))
     if not log_filename == "":
-        logger.info("Adding handler for log file %s with log level %s",log_filename, log_level_file)
+        logger.info("Adding handler for log file %s with log level %s", log_filename, log_level_file)
         logger.addHandler(get_file_handler(log_filename, log_level_file))
     return logger

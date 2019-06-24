@@ -1,16 +1,16 @@
 # PRAW from https://github.com/praw-dev/praw
-import praw
 # https://stackoverflow.com/questions/4770297/convert-utc-datetime-string-to-local-datetime
 from datetime import datetime
+
+import praw
 # https://medium.com/@eleroy/10-things-you-need-to-know-about-date-and-time-in-python-with-datetime-pytz-dateutil-timedelta-309bfbafb3f7
 import pytz
 
-from util.log_setup import get_logger_with_name
 from util.json_config_parser import JsonConfig
+from util.log_setup import get_logger_with_name
 
 # https://stackoverflow.com/questions/1312331/using-a-global-dictionary-with-threads-in-python
 # TODO use locks to add search results directly to a global dictionary (but then we lose the result->searchparam relation)
-from threading import RLock
 
 # https://docs.python.org/3/library/logging.html#logging.Formatter
 # https://docs.python.org/3/library/time.html#time.strftime
@@ -18,6 +18,7 @@ from threading import RLock
 # Chosen from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 local_timezone = 'America/Los_Angeles'
 to_zone = pytz.timezone(local_timezone)
+
 
 def main():
     # read in configs
@@ -28,10 +29,8 @@ def main():
     logger_instance = get_logger_with_name("core", console_log_level, file_log_filepath, file_log_level)
 
     logger_instance.info('Initializing PRAW instance...')
-    # `client_id` and `client_secret` are retrieved from the praw.ini file#
-    # TODO move this to a config
-    reddit = praw.Reddit(configuration.get_config_value("praw_client_id"),
-                         configuration.get_config_value("praw_client_secret"),
+    reddit = praw.Reddit(client_id=configuration.get_config_value("praw_client_id"),
+                         client_secret=configuration.get_config_value("praw_client_secret"),
                          user_agent='reddit-search-and-email')
 
     # define the results dictionary
@@ -46,10 +45,9 @@ def main():
     # format the email output
 
 
-
 def run_search(logger_instance, reddit, search_dict, search_name, subreddits, search_string):
     # Define a temporary multireddit and perform a search as documented on https://praw.readthedocs.io/en/latest/code_overview/reddit/subreddits.html
-    searchListingGenerator = reddit.subreddit(subreddits).search(search_string,sort='new',time_filter='week')
+    searchListingGenerator = reddit.subreddit(subreddits).search(search_string, sort='new', time_filter='week')
     # make sure a nested submission dict exists in the value of the search dict https://www.programiz.com/python-programming/nested-dictionary
     if not (search_name in search_dict):
         search_dict[search_name] = {}
