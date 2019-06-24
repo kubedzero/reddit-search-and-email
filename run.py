@@ -6,6 +6,7 @@ from datetime import datetime
 import pytz
 
 from util.log_setup import get_logger_with_name
+from util.json_config_parser import JsonConfig
 
 # https://stackoverflow.com/questions/1312331/using-a-global-dictionary-with-threads-in-python
 # TODO use locks to add search results directly to a global dictionary (but then we lose the result->searchparam relation)

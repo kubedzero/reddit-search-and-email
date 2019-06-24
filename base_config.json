@@ -15,5 +15,12 @@
   "praw_client_secret": "",
   "file_log_level": "DEBUG",
   "console_log_level": "DEBUG",
+  "file_log_filepath": "./log_output.log",
+    "logging": [
+      {
+              "file_log_level": "DEBUG",
+  "console_log_level": "DEBUG",
   "file_log_filepath": "./log_output.log"
+      }
+  ]
 }

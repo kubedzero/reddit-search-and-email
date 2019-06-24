@@ -1,20 +1,38 @@
 import json
 from os import path
+
 from util.log_setup import get_logger_with_name
 
 
 # https://www.dummies.com/programming/python/how-to-create-a-constructor-in-python/
 class JsonConfig:
 
-    # Function takes in a search string like "level1.level_2.level3" + a JSON object and wants the value stored there.
-    # Base case is if there are no dots in the search string, then return the value stored with the search string
-    # TODO needs to handle not passing through a dict but rather passing through a list (or handling the list and doing independent searches of the separate dicts, consolidating them at this level
-    # otherwise strip off the first search string up to and including the dot and recursively call with the reduced search string and the reduced JSON
-    # Throw an exception if the JSON at this level is an array TODO of sorts
-    # Throw an exception if the key isn't found at this level
-    def dict_search(self, search_string, dict):
-        if search_string in dict:
-            return dict.get(search_string)
+    # Function takes in a search string like "level1.level_2.L3" + a dict and gets the value of the deepest key L3.
+    def __dict_search(self, search_string, remaining_dict):
+        # https://stackoverflow.com/questions/6903557/splitting-on-first-occurrence
+        split_search_string = search_string.split(".", 1)
+        # base case of there being no further nested levels in the search string/dictionary
+        if len(split_search_string) == 1:
+            # dict returns None if the value isn't found
+            return remaining_dict.get(search_string)
+        else:
+            # Recursive case where a dot exists, indicating remaining levels of the search string
+            current_search_string = split_search_string[0]
+            remaining_search_string = split_search_string[1]
+            if current_search_string in remaining_dict:
+                new_value = remaining_dict.get(current_search_string)
+                # get the value and check if it's a list or a dict. if a list, spawn separate recursive and combine
+                # TODO Refactor to support consecutive lists in lists
+                if isinstance(new_value, list):
+                    response_list = [self.__dict_search(remaining_search_string, inner_dict)
+                                     if inner_dict else None for inner_dict in new_value]
+                    if len(response_list) == 1:
+                        return response_list[0]
+                else:
+                    return self.__dict_search(remaining_search_string, new_value)
+            else:
+                # Mirror the behavior of dict.get() when no value can be found
+                return None
 
     # Given a key of a value to look for, find it in the object and return it
     def get_config_value(self, key):
@@ -25,14 +43,25 @@ class JsonConfig:
         # iterate through the config_values list of tuples. If the value is present, return it.
         # Otherwise continue to the fallback config, until we have no more configs left to check
         for config_tuple in self._config_tuples:
-            self.dict_search(key,config_tuple[1])
+            # search_result can either be a single value or a list of values
+            search_result = self.__dict_search(key, config_tuple[1])
+            # Make sure the result isn't None or that we're not returning a whole list of None
+            # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
+            # TODO see if this can be simplified
+            if not (isinstance(search_result, list) and search_result[1:] == search_result[:-1] and any(
+                    element is None for element in search_result)) and not (
+                    not isinstance(search_result, list) and search_result is None):
+                return search_result
         # If there are no configs left to check, the key isn't defined. Throw an exception
-        raise Exception("Value could not be found for key %s", key)
+        message = "Value could not be found for key [{}]".format(key)
+        self._logger_instance.critical(message)
+        raise Exception(message)
 
-    # Called after config files are ingested, this method replaces the logger with a configured version
-    def bootstrap_logger(self):
+    # Called after config files are ingested, this private method replaces the logger with a configured version
+    # Private Methods: https://linux.die.net/diveintopython/html/object_oriented_framework/private_functions.html
+    def __bootstrap_logger(self):
         self._logger_instance.info("Attempting to bootstrap JSON config parser logger with config values")
-        config_console_log_level = self.get_config_value("console_log_level")
+        config_console_log_level = self.get_config_value("logging.console_log_level")
         config_file_log_level = self.get_config_value("file_log_level")
         config_file_log_filepath = self.get_config_value("file_log_filepath")
         self._logger_instance = get_logger_with_name(self._LOG_NAME, config_console_log_level, config_file_log_filepath,
@@ -54,7 +83,5 @@ class JsonConfig:
             with open(filename) as file_data:
                 # Add a new tuple to the config values list
                 self._config_tuples.append((filename, json.load(file_data)))
-        self._logger_instance.debug("Ingested Config files are: %s", print(self._config_tuples))
-        self.bootstrap_logger()
-
-obj = JsonConfig(["../base_config.json"])
+        self.__bootstrap_logger()
+        self._logger_instance.debug("Ingested Config files are: {}".format(print(self._config_tuples)))
