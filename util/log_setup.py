@@ -6,11 +6,14 @@ from logging.handlers import RotatingFileHandler
 
 LOG_FORMATTER = logging.Formatter("%(asctime)s[%(name)s][%(levelname)s]: %(message)s", datefmt='%Y-%m-%dT%H:%M:%S%z')
 
+
 def get_console_handler(log_level):
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(LOG_FORMATTER)
     console_handler.setLevel(log_level)
     return console_handler
+
+
 def get_file_handler(log_file, log_level):
     # https://docs.python.org/3/library/logging.handlers.html
     # Set write mode to append https://docs.python.org/3/library/functions.html#filemodes
@@ -18,12 +21,18 @@ def get_file_handler(log_file, log_level):
     file_handler.setFormatter(LOG_FORMATTER)
     file_handler.setLevel(log_level)
     return file_handler
-def get_logger_with_name(log_name, log_file, log_level_file, log_level_console):
+
+
+def get_logger_with_name(log_name, log_level_console="INFO", log_filename="", log_level_file="INFO"):
     logger = logging.getLogger(log_name)
-    logger.addHandler(get_console_handler(log_level_console))
-    logger.addHandler(get_file_handler(log_file, log_level_file))
-    # with this pattern, it's rarely necessary to propagate the error up to parent
-    logger.propagate = False
     # set the root logger to the lowest level so its handlers set logging limits instead
     logger.setLevel(logging.DEBUG)
+    logger.addHandler(get_console_handler(log_level_console))
+    if log_filename == "":
+        logger.warning("Skipping a file log handler as a filename was not defined")
+    else:
+        logger.info("Adding handler for log file %s with log level %s",log_filename, log_level_file)
+        logger.addHandler(get_file_handler(log_filename, log_level_file))
+    # with this pattern, it's rarely necessary to propagate the error up to parent
+    logger.propagate = False
     return logger

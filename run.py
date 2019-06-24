@@ -18,21 +18,25 @@ LOG_FILE = "reddit-search-and-email.log"
 LOG_LEVEL_FILE = "INFO"
 LOG_LEVEL_CONSOLE = "DEBUG"
 
-logger_instance = get_logger_with_name("core", LOG_FILE, LOG_LEVEL_FILE, LOG_LEVEL_CONSOLE)
+logger_instance = get_logger_with_name("core", LOG_LEVEL_CONSOLE, LOG_FILE, LOG_LEVEL_FILE)
 # Chosen from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 local_timezone = 'America/Los_Angeles'
 logger_instance.debug('Setting local timezone to ' + local_timezone)
 to_zone = pytz.timezone(local_timezone)
 
 def main():
-    logger_instance.warning('File log level set to [%s] and Console to [%s]', LOG_LEVEL_FILE, LOG_LEVEL_CONSOLE)
+    logger_instance.warning('Starting up... File log level set to [%s] and Console to [%s]',
+                            LOG_LEVEL_FILE, LOG_LEVEL_CONSOLE)
 
     logger_instance.info('Initializing PRAW instance')
-    # `client_id` and `client_secret` are retrieved from the praw.ini file
+    # `client_id` and `client_secret` are retrieved from the praw.ini file#
+    # TODO move this to a config
     reddit = praw.Reddit(user_agent='reddit-search-and-email')
 
     # define the results dictionary
     search_dict = {}  # could also say = dict()
+    # TODO change searches to happen in a loop (maybe store output dicts, maybe not?
+    # TODO move search params to config
     run_search(reddit, search_dict, 'Search 1', 'redditdev+learnpython',
         'title:"PRAW')
     run_search(reddit, search_dict, 'Search 2', 'redditdev',
@@ -57,19 +61,15 @@ def run_search(reddit, search_dict, search_name, subreddits, search_string):
                               , submission.title, submission.permalink)
         # useful submission fields: title, created_utc, permalink, url (linked url or permalink) found on https://praw.readthedocs.io/en/latest/code_overview/models/submission.html
 
-    logger_instance.info('Result count is %d in subreddit [%s] using search [%s]', len(search_dict[search_name]), subreddits,
-                         search_string)
-    return search_dict[search_name]
+    logger_instance.info('Result count is %d in subreddit [%s] using search [%s]', len(search_dict[search_name]),
+                         subreddits, search_string)
 
 
 # https://stackoverflow.com/questions/419163/what-does-if-name-main-do 
-# Call main when Python runs this file directly
+# Call main() when Python runs this file directly
 if __name__ == "__main__": main()
 
-
-
-# 	my_logger.debug(to_zone.localize(datetime.fromtimestamp(submission.created_utc)).isoformat('T'),submission.title, 'https://reddit.com'+submission.permalink)
-
+# TODO add scheduling system
 # Set last email sent to value from cfg file
 # get list of submission titles and dates fitting the search critera
 # Iterate through and check dates against last email sent var
