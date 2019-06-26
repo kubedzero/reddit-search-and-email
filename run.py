@@ -2,9 +2,16 @@
 # https://stackoverflow.com/questions/4770297/convert-utc-datetime-string-to-local-datetime
 from datetime import datetime
 
+from os import path
+
 import praw
 # https://medium.com/@eleroy/10-things-you-need-to-know-about-date-and-time-in-python-with-datetime-pytz-dateutil-timedelta-309bfbafb3f7
 import pytz
+
+# https://docs.python.org/3/library/argparse.html
+# https://stackabuse.com/command-line-arguments-in-python/
+import argparse
+import sys
 
 from util.json_config_parser import JsonConfig
 from util.log_setup import get_logger_with_name
@@ -20,10 +27,47 @@ local_timezone = 'UTC'
 #'America/Los_Angeles'
 to_zone = pytz.timezone(local_timezone)
 
+def dedupe_and_write_search_results(new_search_result_dict, path_to_old_results):
+    if (path.exists(path_to_old_results) or path.isfile(path_to_old_results)):
+        old_results_set = set()
+        new_results_to_write = set()
+        with open(path_to_old_results, 'r') as opened_file:
+            # TODO test if list wrapper is needed
+            for string in list(opened_file):
+                old_results_set.add(string.rstrip())
+            # https://docs.python.org/3/library/stdtypes.html#dictionary-view-objects
+            for dict_entry in list(new_search_result_dict.values()):
+                for submission_id in list(dict_entry.keys()):
+                    if submission_id in old_results_set:
+                        dict_entry.pop(submission_id, None)
+                    else:
+                        new_results_to_write.add(submission_id + '\n')
 
-def main():
-    # read in configs
-    configuration = JsonConfig(["./personal_config.json", "./default_base_config.json"])
+        # Open the CSV file (1 column schema [submission_id] without header) in append mode (creating if it didn't exist)
+        with open(path_to_old_results, 'a+') as opened_file:
+            opened_file.writelines(list(new_results_to_write))
+
+    # TODO add a log message in case this does nothing since no file existed
+
+
+
+def main(args):
+
+    # set up the argparse object that defines and handles program input arguments
+    parser = argparse.ArgumentParser(description='A program to perform Reddit searches')
+    parser.add_argument('--config', '-c', help="Path to a configuration file", type=str)
+    # interprets as true if passed in, false otherwise
+    parser.add_argument('--skipdedupe', '-s', help="Skip deduping on existing results", action='store_true')
+    args = parser.parse_args()
+
+    # TODO test if default config path works if calling run.py from other locations
+    config_list = ["./default_base_config.json"]
+    # Add the passed-in config path if it is passed in
+    if args.config is not None:
+        config_list.insert(0,args.config)
+    # Initialize the configuration reader using the list of configuration files
+    configuration = JsonConfig(config_list)
+
     file_log_level = configuration.get_config_value("logging.file_log_level")
     console_log_level = configuration.get_config_value("logging.console_log_level")
     file_log_filepath = configuration.get_config_value("logging.file_log_filepath")
@@ -43,7 +87,9 @@ def main():
         run_search(logger_instance, reddit, search_result_dict, search_params.get("search_name"),
                    search_params.get("subreddits"), search_params.get("search_params"))
 
-    # pass the dict + a
+    # Dedupe the search results with the stored previous results if the skip argument is false (not passed in)
+    if not args.skipdedupe:
+        dedupe_and_write_search_results(search_result_dict,"./old_results.csv")
 
     # delete any entries in the results dictionary whose submission IDs are listed in the already_returned file
     # TODO make a function diff_with_existing_results(search_result_dict, path_to_existing_CSV_file, update_existing=True) that returns a dict with only new results while adding all new
@@ -75,8 +121,8 @@ def run_search(logger_instance, reddit, search_dict, search_name, subreddits, se
 
 
 # https://stackoverflow.com/questions/419163/what-does-if-name-main-do 
-# Call main() when Python runs this file directly
-if __name__ == "__main__": main()
+# Call main(sys.argv[1:]) this file is run. Pass the arg array from element 1 onwards to exclude the program name arg
+if __name__ == "__main__": main(sys.argv[1:])
 
 # TODO add scheduling system
 # Set last email sent to value from cfg file
