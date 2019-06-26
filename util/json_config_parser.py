@@ -3,7 +3,8 @@ from os import path
 
 from util.log_setup import get_logger_with_name
 
-
+# https://stackoverflow.com/questions/19078170/python-how-would-you-save-a-simple-settings-config-file
+# https://martin-thoma.com/configuration-files-in-python/
 # https://www.dummies.com/programming/python/how-to-create-a-constructor-in-python/
 class JsonConfig:
 

@@ -8,6 +8,8 @@ import praw
 # https://medium.com/@eleroy/10-things-you-need-to-know-about-date-and-time-in-python-with-datetime-pytz-dateutil-timedelta-309bfbafb3f7
 import pytz
 
+import markdown
+
 # https://docs.python.org/3/library/argparse.html
 # https://stackabuse.com/command-line-arguments-in-python/
 import argparse
@@ -36,18 +38,35 @@ def dedupe_and_write_search_results(new_search_result_dict, path_to_old_results)
             for string in list(opened_file):
                 old_results_set.add(string.rstrip())
             # https://docs.python.org/3/library/stdtypes.html#dictionary-view-objects
-            for dict_entry in list(new_search_result_dict.values()):
-                for submission_id in list(dict_entry.keys()):
+            for dict_entry_tuple in list(new_search_result_dict.items()):
+                for submission_id in list(dict_entry_tuple[1].keys()):
                     if submission_id in old_results_set:
-                        dict_entry.pop(submission_id, None)
+                        # if the submission was previously sent, remove it from the dict.
+                        # TODO track the number of items removed
+                        # TODO be more verbose
+                        dict_entry_tuple[1].pop(submission_id)
                     else:
+                        # Otherwise leave the dict untouched AND add it to the list of items to write
                         new_results_to_write.add(submission_id + '\n')
+                if len(dict_entry_tuple[1]) == 0:
+                    new_search_result_dict.pop(dict_entry_tuple[0])
 
         # Open the CSV file (1 column schema [submission_id] without header) in append mode (creating if it didn't exist)
         with open(path_to_old_results, 'a+') as opened_file:
             opened_file.writelines(list(new_results_to_write))
 
     # TODO add a log message in case this does nothing since no file existed
+
+# Returns a string of markdown formatted text
+def construct_email_markdown(search_result_dict):
+    email_body_lines = []
+    email_body_lines.append("## New Search Results Found!")
+    for dict_entry_tuple in list(search_result_dict.items()):
+        email_body_lines.append('### {}'.format(dict_entry_tuple[0]))
+        for submission in list(dict_entry_tuple[1].values()):
+            email_body_lines.append('* [{}](https://reddit.com{})'.format(submission.title, submission.permalink))
+    # Aggregate the lines of markdown into a single string
+    return "\n".join(email_body_lines)
 
 
 
@@ -88,27 +107,35 @@ def main(args):
                    search_params.get("subreddits"), search_params.get("search_params"))
 
     # Dedupe the search results with the stored previous results if the skip argument is false (not passed in)
+    # Alternative is to remove submissions with dates earlier than the last email date
     if not args.skipdedupe:
         dedupe_and_write_search_results(search_result_dict,"./old_results.csv")
 
-    # delete any entries in the results dictionary whose submission IDs are listed in the already_returned file
-    # TODO make a function diff_with_existing_results(search_result_dict, path_to_existing_CSV_file, update_existing=True) that returns a dict with only new results while adding all new
-    # configuration option to choose whether to ignore existing or not
-    # configuration option on where to store existing items
-    # TODO take the remaining results and format them into an email body
+    # Only construct the HTML and markdown if there were results found
+    if len(search_result_dict) != 0:
+        # Construct the MD version of the email and then convert it to HTML with the Markdown package
+        email_body_markdown = construct_email_markdown(search_result_dict)
+        email_body_html = markdown.markdown(email_body_markdown)
+    else:
+        # TODO expand this to be more verbose
+        print("no new search results found")
+
     # TODO configure the email client
+    # TODO add scheduling system
     # format the email output
-    print(search_result_dict)
+    print(email_body_markdown)
+    print(email_body_html)
 
 
 def run_search(logger_instance, reddit, search_dict, search_name, subreddits, search_string):
     # Define a temporary multireddit and perform a search as documented on https://praw.readthedocs.io/en/latest/code_overview/reddit/subreddits.html
     searchListingGenerator = reddit.subreddit(subreddits).search(search_string, sort='new', time_filter='week')
-    # make sure a nested submission dict exists in the value of the search dict https://www.programiz.com/python-programming/nested-dictionary
-    if not (search_name in search_dict):
-        search_dict[search_name] = {}
     # https: // www.w3schools.com / python / python_dictionaries.asp
     for submission in searchListingGenerator:
+        # make sure a nested submission dict exists in the value of the search dict https://www.programiz.com/python-programming/nested-dictionary
+        # only add the key/value to the dict if this search returned any values
+        if not (search_name in search_dict):
+            search_dict[search_name] = {}
         search_dict[search_name][submission.id] = submission
         # TODO remove date formatting from here and just leave debug logs as link and/or title so we don't drag around the pytz
         logger_instance.debug('%s %s https://reddit.com%s',
@@ -116,7 +143,7 @@ def run_search(logger_instance, reddit, search_dict, search_name, subreddits, se
                               , submission.title, submission.permalink)
         # useful submission fields: title, created_utc, permalink, url (linked url or permalink) found on https://praw.readthedocs.io/en/latest/code_overview/models/submission.html
 
-    logger_instance.info('Result count is %d in subreddit [%s] using search [%s]', len(search_dict[search_name]),
+    logger_instance.info('Result count is %d in subreddit [%s] using search [%s]', len(search_dict[search_name]) if search_name in search_dict else 0,
                          subreddits, search_string)
 
 
@@ -124,20 +151,8 @@ def run_search(logger_instance, reddit, search_dict, search_name, subreddits, se
 # Call main(sys.argv[1:]) this file is run. Pass the arg array from element 1 onwards to exclude the program name arg
 if __name__ == "__main__": main(sys.argv[1:])
 
-# TODO add scheduling system
-# Set last email sent to value from cfg file
-# get list of submission titles and dates fitting the search critera
-# Iterate through and check dates against last email sent var
-# if submission is newer, add its URL to the list of URLS
-# Send email containing the list of URLs formatted as their titles
 
-# https://stackoverflow.com/questions/419163/what-does-if-name-main-do explains indentation and how to enter into and run a file
 # Objectives:
-# Get rid of praw.ini and use just one config file
-# Have a default configuration file with sample values that gets auto-read
-# https://stackoverflow.com/questions/19078170/python-how-would-you-save-a-simple-settings-config-file
-# https://martin-thoma.com/configuration-files-in-python/
-# Have a custom config file passed in as an argument that overwrites present values over the sample file
 # Oauth login for Gmail 
 # https://developers.google.com/gmail/api/quickstart/python
 # https://github.com/kootenpv/yagmail#oauth2
@@ -147,8 +162,4 @@ if __name__ == "__main__": main(sys.argv[1:])
 # https://www.geeksforgeeks.org/send-mail-gmail-account-using-python/
 # https://stackabuse.com/how-to-send-emails-with-gmail-using-python/
 # Multithreaded parallel searches
-# History file that stores the permalinks or IDs of previous search results as a sort of dedupe. Could read in the file as a hash set at program start and then every interval add new results to the output list while also writing to the history file and adding to the hash set
-# HTML formatting in the email, maybe from markdown? 
-# Logging mechanism to track dates, times, different log levels
 # Scheduling mechnaism so I don't have to rely on a cron job and can disable/enable at will
-# Config file, maybe JSON or XML or CSV that will store settings like Oauth, searches, timezone, interval, etc
