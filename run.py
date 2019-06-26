@@ -16,33 +16,43 @@ from util.log_setup import get_logger_with_name
 # https://docs.python.org/3/library/time.html#time.strftime
 
 # Chosen from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-local_timezone = 'America/Los_Angeles'
+local_timezone = 'UTC'
+#'America/Los_Angeles'
 to_zone = pytz.timezone(local_timezone)
 
 
 def main():
     # read in configs
-    configuration = JsonConfig(["./personal_config.json","./default_base_config.json"])
+    configuration = JsonConfig(["./personal_config.json", "./default_base_config.json"])
     file_log_level = configuration.get_config_value("logging.file_log_level")
     console_log_level = configuration.get_config_value("logging.console_log_level")
     file_log_filepath = configuration.get_config_value("logging.file_log_filepath")
+
     logger_instance = get_logger_with_name("core", console_log_level, file_log_filepath, file_log_level)
 
+    # Start up PRAW
     logger_instance.info('Initializing PRAW instance...')
     reddit = praw.Reddit(client_id=configuration.get_config_value("praw_client_id"),
                          client_secret=configuration.get_config_value("praw_client_secret"),
                          user_agent='reddit-search-and-email')
 
     # define the results dictionary
-    search_dict = {}  # could also say = dict()
-    # TODO change searches to happen in a loop (maybe store output dicts, maybe not?
-    # TODO move search params to config
-    run_search(logger_instance, reddit, search_dict, 'Search 1', 'redditdev+learnpython',
-        'title:"PRAW')
-    run_search(logger_instance, reddit, search_dict, 'Search 2', 'redditdev',
-        'title:Python')
+    search_result_dict = {}  # could also say = dict()
+    # get all the configured searches from the configuration and run them, adding results to the dict
+    for search_params in configuration.get_config_value("searches"):
+        run_search(logger_instance, reddit, search_result_dict, search_params.get("search_name"),
+                   search_params.get("subreddits"), search_params.get("search_params"))
+
+    # pass the dict + a
+
     # delete any entries in the results dictionary whose submission IDs are listed in the already_returned file
+    # TODO make a function diff_with_existing_results(search_result_dict, path_to_existing_CSV_file, update_existing=True) that returns a dict with only new results while adding all new
+    # configuration option to choose whether to ignore existing or not
+    # configuration option on where to store existing items
+    # TODO take the remaining results and format them into an email body
+    # TODO configure the email client
     # format the email output
+    print(search_result_dict)
 
 
 def run_search(logger_instance, reddit, search_dict, search_name, subreddits, search_string):
