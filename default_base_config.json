@@ -6,13 +6,23 @@
             "search_params":"title:PRAW"
         }
     ],
-    "praw_client_id":"yourApiKeyHere",
-    "praw_client_secret":"yourSecretKeyHere",
+    "praw_client_id":"",
+    "praw_client_secret":"",
     "logging":[
         {
             "file_log_level":"INFO",
             "console_log_level":"INFO",
             "file_log_filepath":"./log_output.log"
+        }
+    ],
+    "email_settings": [
+        {
+            "email_subject_text": "New Reddit search results found",
+            "email_sender": "from_email_address@gmail.com",
+            "email_receiver": "to_email_address@gmail.com",
+            "google_api_client_id": "",
+            "google_api_client_secret": "",
+            "google_refresh_token": ""
         }
     ]
 }

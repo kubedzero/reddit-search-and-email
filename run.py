@@ -4,6 +4,8 @@ from datetime import datetime
 
 from os import path
 
+from util.email_tools import EmailTools
+
 import praw
 # https://medium.com/@eleroy/10-things-you-need-to-know-about-date-and-time-in-python-with-datetime-pytz-dateutil-timedelta-309bfbafb3f7
 import pytz
@@ -69,7 +71,8 @@ def construct_email_markdown(search_result_dict):
     return "\n".join(email_body_lines)
 
 
-
+# TODO refactor logging and make this a class, then main can just call the class
+# TODO reread the configs every interval, in case there are updates to the search params (maybe as a flag)
 def main(args):
 
     # set up the argparse object that defines and handles program input arguments
@@ -87,16 +90,23 @@ def main(args):
     # Initialize the configuration reader using the list of configuration files
     configuration = JsonConfig(config_list)
 
-    file_log_level = configuration.get_config_value("logging.file_log_level")
     console_log_level = configuration.get_config_value("logging.console_log_level")
     file_log_filepath = configuration.get_config_value("logging.file_log_filepath")
+    file_log_level = configuration.get_config_value("logging.file_log_level")
 
     logger_instance = get_logger_with_name("core", console_log_level, file_log_filepath, file_log_level)
 
+    # Do prechecks to confirm the PRAW auth info isn't default
+    praw_client_id = configuration.get_config_value("praw_client_id")
+    praw_client_secret = configuration.get_config_value("praw_client_secret")
+    if (praw_client_id == "" or praw_client_secret == ""):
+        logger_instance.error("Reddit PRAW client ID and/or secret have not been set in the config!")
+        logger_instance.error("Go to https://www.reddit.com/prefs/apps/ while logged in to generate auth info")
+
     # Start up PRAW
     logger_instance.info('Initializing PRAW instance...')
-    reddit = praw.Reddit(client_id=configuration.get_config_value("praw_client_id"),
-                         client_secret=configuration.get_config_value("praw_client_secret"),
+    reddit = praw.Reddit(client_id=praw_client_id,
+                         client_secret=praw_client_secret,
                          user_agent='reddit-search-and-email')
 
     # define the results dictionary
@@ -111,14 +121,39 @@ def main(args):
     if not args.skipdedupe:
         dedupe_and_write_search_results(search_result_dict,"./old_results.csv")
 
-    # Only construct the HTML and markdown if there were results found
-    if len(search_result_dict) != 0:
-        # Construct the MD version of the email and then convert it to HTML with the Markdown package
-        email_body_markdown = construct_email_markdown(search_result_dict)
-        email_body_html = markdown.markdown(email_body_markdown)
-    else:
+    # Exit early if there are no results in the search dict
+    if len(search_result_dict) == 0:
         # TODO expand this to be more verbose
         print("no new search results found")
+        return
+
+    email_sender = configuration.get_config_value("email_settings.email_sender")
+    email_recipient = configuration.get_config_value("email_settings.email_recipient")
+
+    email_tools = EmailTools(google_account_email=email_sender,
+                             google_api_client_id=configuration.get_config_value("email_settings.google_api_client_id"),
+                             google_api_client_secret=configuration.get_config_value("email_settings.google_api_client_secret"),
+                             google_refresh_token=configuration.get_config_value("email_settings.google_refresh_token"),
+                             console_log_level=console_log_level,
+                             file_log_filepath=file_log_filepath,
+                             file_log_level=file_log_level)
+
+    # Construct the MD version of the email and then convert it to HTML with the Markdown package
+    email_body_markdown = construct_email_markdown(search_result_dict)
+    email_body_html = markdown.markdown(email_body_markdown)
+    # TODO use override search-specific email to send emails to different addresses based on the search result
+    # TODO split out the markdown and html generation so it gets done per search maybe, depending on the email
+    mime_email = email_tools.create_mime_email(email_body_markdown, email_body_html,
+                                               email_subject_text=configuration.get_config_value("email_settings.email_subject_text"),
+                                               email_sender=configuration.get_config_value("email_settings.email_sender"),
+                                               email_recipient=email_recipient)
+    email_tools.send_mail(email_sender,email_recipient,mime_email)
+
+    # If I initialize email dumb for the first time without a token, I need it to spit out a URL.
+    # I can put a dumb set of credentials in the base config. If it detects the dumb creds, it will link to the oauth information resources saying an aPI and stuff needs to be created and added to the JSON
+    # I can put a dumb token with a known name in the base config. If this detects it, it can call the email class section that generates a url to make a token and then print out instructions for replacing the token
+    # if it recognizes the token and gets back an invalid expiring time, handle it and say the API creds (id, secret, token) didn't work and to reset them to empty or placeholder for instructions
+    # If it recognizes the token and everything works out, try to send the email for real
 
     # TODO configure the email client
     # TODO add scheduling system

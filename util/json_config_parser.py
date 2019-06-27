@@ -3,6 +3,7 @@ from os import path
 
 from util.log_setup import get_logger_with_name
 
+
 # https://stackoverflow.com/questions/19078170/python-how-would-you-save-a-simple-settings-config-file
 # https://martin-thoma.com/configuration-files-in-python/
 # https://www.dummies.com/programming/python/how-to-create-a-constructor-in-python/
@@ -58,7 +59,7 @@ class JsonConfig:
                     return [None]
 
     # Given a key of a value to look for, find it in the object and return it
-    def get_config_value(self, key, simplify_singleton=True, remove_none=False):
+    def get_config_value(self, key, simplify_singleton=True, remove_none=False, fail_quietly=False):
 
         if key == "":
             # https://realpython.com/python-exceptions/
@@ -76,7 +77,8 @@ class JsonConfig:
 
             # Make sure our result is not empty or a list of only None
             # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
-            if len(list(filter(None, search_result))) != 0:
+            # TODO filter doesn't handle empty string. A quick fix was added but I need to test
+            if len(list(filter(None, search_result))) != 0 or '' in search_result:
                 # For parsing ease by the caller, allow just a value to be returned if the result was a singleton list
                 if len(search_result) == 1 and simplify_singleton:
                     return search_result[0]
@@ -85,8 +87,13 @@ class JsonConfig:
 
         # If there are no configs left to check, the key isn't defined. Throw an exception
         message = "Value could not be found for key [{}]".format(key)
-        self._logger_instance.critical(message)
-        raise Exception(message)
+        # Allow the function to exit cleanly if desired (Use case: value is optional)
+        if fail_quietly:
+            self._logger_instance.info(message)
+            return None
+        else:
+            self._logger_instance.critical(message)
+            raise Exception(message)
 
     # Called after config files are ingested, this private method replaces the logger with a configured version
     # Private Methods: https://linux.die.net/diveintopython/html/object_oriented_framework/private_functions.html
