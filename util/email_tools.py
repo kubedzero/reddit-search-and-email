@@ -6,7 +6,7 @@ import urllib.request
 import json
 import smtplib
 import base64
-
+import time
 
 def url_escape(text):
     return urllib.parse.quote(text, safe='~-._')
@@ -19,6 +19,32 @@ def url_format_params(params):
     return '&'.join(param_fragments)
 
 
+def generate_oauth2_string(username, access_token, as_base64=False):
+    auth_string = 'user=%s\1auth=Bearer %s\1\1' % (username, access_token)
+    if as_base64:
+        auth_string = base64.b64encode(auth_string.encode('ascii')).decode('ascii')
+    return auth_string
+
+
+# Creates and returns a MIME multipart email
+def create_mime_email(email_text, email_html, email_subject_text, email_sender, email_recipient):
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = email_subject_text
+    message["From"] = email_sender
+    message["To"] = email_recipient
+
+    # Turn these into plain/html MIMEText objects
+    part1 = MIMEText(email_text, "plain")
+    part2 = MIMEText(email_html, "html")
+
+    # Add HTML/plain-text parts to MIMEMultipart message
+    # The email client will try to render the last part first
+    message.attach(part1)
+    message.attach(part2)
+    return message
+
+
 class EmailTools:
 
     GOOGLE_ACCOUNTS_BASE_URL = 'https://accounts.google.com'
@@ -26,25 +52,6 @@ class EmailTools:
     GOOGLE_API_CLIENT_ID = ""
     GOOGLE_API_CLIENT_SECRET = ""
     GOOGLE_REFRESH_TOKEN = ""
-
-    # Creates and returns a MIME multipart email
-    def create_mime_email(self, email_text, email_html, email_subject_text, email_sender, email_recipient):
-
-        message = MIMEMultipart("alternative")
-        message["Subject"] = email_subject_text
-        message["From"] = email_sender
-        message["To"] = email_recipient
-
-        # Turn these into plain/html MIMEText objects
-        part1 = MIMEText(email_text, "plain")
-        part2 = MIMEText(email_html, "html")
-
-        # Add HTML/plain-text parts to MIMEMultipart message
-        # The email client will try to render the last part first
-        message.attach(part1)
-        message.attach(part2)
-        self._logger_instance.debug("Created MIME message is: {}".format(message))
-        return message
 
     def command_to_url(self, command):
         return '%s/%s' % (self.GOOGLE_ACCOUNTS_BASE_URL, command)
@@ -60,25 +67,19 @@ class EmailTools:
             'UTF-8')
         return json.loads(response)
 
-    def generate_oauth2_string(self, username, access_token, as_base64=False):
-        auth_string = 'user=%s\1auth=Bearer %s\1\1' % (username, access_token)
-        if as_base64:
-            auth_string = base64.b64encode(auth_string.encode('ascii')).decode('ascii')
-        return auth_string
-
-    def refresh_authorization(self,):
+    def refresh_authorization(self):
         response = self.call_refresh_token(self.GOOGLE_API_CLIENT_ID, self.GOOGLE_API_CLIENT_SECRET,
                                            self.GOOGLE_REFRESH_TOKEN)
         return response['access_token'], response['expires_in']
 
-    def send_mail(self, email_sender, email_recipient, mime_message):
+    def send_mail(self, mime_message):
         access_token, expires_in = self.refresh_authorization()
-        auth_string = self.generate_oauth2_string(email_sender, access_token, as_base64=True)
+        auth_string = generate_oauth2_string(self.GOOGLE_ACCOUNT_EMAIL, access_token, as_base64=True)
         server = smtplib.SMTP('smtp.gmail.com:587')
         server.ehlo(self.GOOGLE_API_CLIENT_ID)
         server.starttls()
         server.docmd('AUTH', 'XOAUTH2 ' + auth_string)
-        server.sendmail(email_sender, email_recipient, mime_message.as_string())
+        server.sendmail(self.GOOGLE_ACCOUNT_EMAIL, mime_message["To"].split(","), mime_message.as_string())
         server.quit()
 
     def call_authorize_tokens(self, client_id, client_secret, authorization_code):
@@ -118,6 +119,7 @@ class EmailTools:
         self._logger_instance.debug("Initialized logger for EmailTools")
 
         # Store the credentials in the class
+        self.GOOGLE_ACCOUNT_EMAIL = google_account_email
         self.GOOGLE_API_CLIENT_ID = google_api_client_id
         self.GOOGLE_API_CLIENT_SECRET = google_api_client_secret
         self.GOOGLE_REFRESH_TOKEN = google_refresh_token
@@ -137,11 +139,15 @@ class EmailTools:
             refresh_token, access_token, expires_in = self.get_authorization(google_api_client_id,
                                                                              google_api_client_secret)
             # TODO write this to the JSON automatically
+            self._logger_instance.info("*" * 20)
             self._logger_instance.info('Credentials Valid. Set as your JSON email_settings.google_refresh_token: {}'
                                        .format(refresh_token))
+            self._logger_instance.info("*" * 20)
+            time.sleep(2)
             self.GOOGLE_REFRESH_TOKEN = refresh_token
 
         self._logger_instance.info("All Oauth2 credentials present. Checking for validity...")
+        # TODO add try catch to this so our own error gets thrown
         access_token, expires_in = self.refresh_authorization()
         if access_token != "" and expires_in > 0:
             self._logger_instance.info("Credentials valid, returning EmailTools class")

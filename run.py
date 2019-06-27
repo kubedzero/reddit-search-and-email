@@ -4,7 +4,7 @@ from datetime import datetime
 
 from os import path
 
-from util.email_tools import EmailTools
+from util.email_tools import EmailTools, create_mime_email
 
 import praw
 # https://medium.com/@eleroy/10-things-you-need-to-know-about-date-and-time-in-python-with-datetime-pytz-dateutil-timedelta-309bfbafb3f7
@@ -132,7 +132,8 @@ def main(args):
 
     email_tools = EmailTools(google_account_email=email_sender,
                              google_api_client_id=configuration.get_config_value("email_settings.google_api_client_id"),
-                             google_api_client_secret=configuration.get_config_value("email_settings.google_api_client_secret"),
+                             google_api_client_secret=configuration.get_config_value(
+                                 "email_settings.google_api_client_secret"),
                              google_refresh_token=configuration.get_config_value("email_settings.google_refresh_token"),
                              console_log_level=console_log_level,
                              file_log_filepath=file_log_filepath,
@@ -143,17 +144,14 @@ def main(args):
     email_body_html = markdown.markdown(email_body_markdown)
     # TODO use override search-specific email to send emails to different addresses based on the search result
     # TODO split out the markdown and html generation so it gets done per search maybe, depending on the email
-    mime_email = email_tools.create_mime_email(email_body_markdown, email_body_html,
-                                               email_subject_text=configuration.get_config_value("email_settings.email_subject_text"),
-                                               email_sender=configuration.get_config_value("email_settings.email_sender"),
-                                               email_recipient=email_recipient)
-    email_tools.send_mail(email_sender,email_recipient,mime_email)
-
-    # If I initialize email dumb for the first time without a token, I need it to spit out a URL.
-    # I can put a dumb set of credentials in the base config. If it detects the dumb creds, it will link to the oauth information resources saying an aPI and stuff needs to be created and added to the JSON
-    # I can put a dumb token with a known name in the base config. If this detects it, it can call the email class section that generates a url to make a token and then print out instructions for replacing the token
-    # if it recognizes the token and gets back an invalid expiring time, handle it and say the API creds (id, secret, token) didn't work and to reset them to empty or placeholder for instructions
-    # If it recognizes the token and everything works out, try to send the email for real
+    # TODO rather than search name partitioning the search results, use email recipient?
+    mime_email = create_mime_email(email_body_markdown, email_body_html,
+                                   email_subject_text=configuration.get_config_value(
+                                       "email_settings.email_subject_text"),
+                                   email_sender=configuration.get_config_value("email_settings.email_sender"),
+                                   email_recipient=email_recipient)
+    # Send the MIME mail using the email_tools configuration, having already been authenticated
+    email_tools.send_mail(mime_email)
 
     # TODO configure the email client
     # TODO add scheduling system
@@ -188,13 +186,4 @@ if __name__ == "__main__": main(sys.argv[1:])
 
 
 # Objectives:
-# Oauth login for Gmail 
-# https://developers.google.com/gmail/api/quickstart/python
-# https://github.com/kootenpv/yagmail#oauth2
-# https://yagmail.readthedocs.io/en/latest/api.html#authentication
-# https://realpython.com/python-send-email/
-# https://stackoverflow.com/questions/10147455/how-to-send-an-email-with-gmail-as-provider-using-python
-# https://www.geeksforgeeks.org/send-mail-gmail-account-using-python/
-# https://stackabuse.com/how-to-send-emails-with-gmail-using-python/
-# Multithreaded parallel searches
 # Scheduling mechnaism so I don't have to rely on a cron job and can disable/enable at will
