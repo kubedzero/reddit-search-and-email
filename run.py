@@ -76,11 +76,11 @@ class SearchAndEmailExecutor:
                     old_results_set.add(string.rstrip())
                 # https://docs.python.org/3/library/stdtypes.html#dictionary-view-objects
                 # check each email address in the search dict
-                for email_dict_tuple in self.search_result_dict.items():
+                for email_dict_tuple in list(self.search_result_dict.items()):
                     # check each search_name under each email
-                    for search_name_tuple in email_dict_tuple[1].items():
+                    for search_name_tuple in list(email_dict_tuple[1].items()):
                         # Check each submission under each search name
-                        for submission_id in search_name_tuple[1].keys():
+                        for submission_id in list(search_name_tuple[1].keys()):
                             if submission_id in old_results_set:
                                 # if the submission was previously sent, remove it from the dict.
                                 # TODO track the number of items removed
@@ -222,6 +222,7 @@ def main(args):
     print("done")
 
     # TODO add scheduling system
+    # TODO add argument for only running once and not scheduling
 
 # https://stackoverflow.com/questions/419163/what-does-if-name-main-do 
 # Call main(sys.argv[1:]) this file is run. Pass the arg array from element 1 onwards to exclude the program name arg
