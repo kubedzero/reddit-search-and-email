@@ -40,18 +40,25 @@ def dedupe_and_write_search_results(new_search_result_dict, path_to_old_results)
             for string in list(opened_file):
                 old_results_set.add(string.rstrip())
             # https://docs.python.org/3/library/stdtypes.html#dictionary-view-objects
-            for dict_entry_tuple in list(new_search_result_dict.items()):
-                for submission_id in list(dict_entry_tuple[1].keys()):
-                    if submission_id in old_results_set:
-                        # if the submission was previously sent, remove it from the dict.
-                        # TODO track the number of items removed
-                        # TODO be more verbose
-                        dict_entry_tuple[1].pop(submission_id)
-                    else:
-                        # Otherwise leave the dict untouched AND add it to the list of items to write
-                        new_results_to_write.add(submission_id + '\n')
-                if len(dict_entry_tuple[1]) == 0:
-                    new_search_result_dict.pop(dict_entry_tuple[0])
+            # check each email address in the search dict
+            for email_dict_tuple in new_search_result_dict.items():
+                # check each search_name under each email
+                for search_name_tuple in email_dict_tuple[1].items():
+                    # Check each submission under each search name
+                    for submission_id in search_name_tuple[1].keys():
+                        if submission_id in old_results_set:
+                            # if the submission was previously sent, remove it from the dict.
+                            # TODO track the number of items removed
+                            # TODO be more verbose
+                            search_name_tuple[1].pop(submission_id)
+                        else:
+                            # Otherwise leave the dict untouched AND add it to the list of items to write
+                            new_results_to_write.add(submission_id + '\n')
+                    if len(search_name_tuple[1]) == 0:
+                        email_dict_tuple[1].pop(search_name_tuple[0])
+                if len(email_dict_tuple[1]) == 0:
+                    new_search_result_dict.pop(email_dict_tuple[0])
+
 
         # Open the CSV file (1 column schema [submission_id] without header) in append mode (creating if it didn't exist)
         with open(path_to_old_results, 'a+') as opened_file:
@@ -63,9 +70,9 @@ def dedupe_and_write_search_results(new_search_result_dict, path_to_old_results)
 def construct_email_markdown(search_result_dict):
     email_body_lines = []
     email_body_lines.append("## New Search Results Found!")
-    for dict_entry_tuple in list(search_result_dict.items()):
+    for dict_entry_tuple in search_result_dict.items():
         email_body_lines.append('### {}'.format(dict_entry_tuple[0]))
-        for submission in list(dict_entry_tuple[1].values()):
+        for submission in dict_entry_tuple[1].values():
             email_body_lines.append('* [{}](https://reddit.com{})'.format(submission.title, submission.permalink))
     # Aggregate the lines of markdown into a single string
     return "\n".join(email_body_lines)
@@ -113,7 +120,11 @@ def main(args):
     search_result_dict = {}  # could also say = dict()
     # get all the configured searches from the configuration and run them, adding results to the dict
     for search_params in configuration.get_config_value("searches"):
-        run_search(logger_instance, reddit, search_result_dict, search_params.get("search_name"),
+        if "email_recipient" in search_params:
+            email_recipient = search_params.get("email_recipient")
+        else:
+            email_recipient = configuration.get_config_value("email_settings.email_recipient")
+        run_search(logger_instance, reddit, search_result_dict, email_recipient, search_params.get("search_name"),
                    search_params.get("subreddits"), search_params.get("search_params"))
 
     # Dedupe the search results with the stored previous results if the skip argument is false (not passed in)
@@ -139,19 +150,21 @@ def main(args):
                              file_log_filepath=file_log_filepath,
                              file_log_level=file_log_level)
 
-    # Construct the MD version of the email and then convert it to HTML with the Markdown package
-    email_body_markdown = construct_email_markdown(search_result_dict)
-    email_body_html = markdown.markdown(email_body_markdown)
-    # TODO use override search-specific email to send emails to different addresses based on the search result
-    # TODO split out the markdown and html generation so it gets done per search maybe, depending on the email
-    # TODO rather than search name partitioning the search results, use email recipient?
-    mime_email = create_mime_email(email_body_markdown, email_body_html,
-                                   email_subject_text=configuration.get_config_value(
-                                       "email_settings.email_subject_text"),
-                                   email_sender=configuration.get_config_value("email_settings.email_sender"),
-                                   email_recipient=email_recipient)
-    # Send the MIME mail using the email_tools configuration, having already been authenticated
-    email_tools.send_mail(mime_email)
+    # TODO for loop iterates over the search result dict, check in on results by email and formatting an email for each
+    for email_tuple in search_result_dict.items():
+        # Construct the MD version of the email and then convert it to HTML with the Markdown package
+        email_body_markdown = construct_email_markdown(email_tuple[1])
+        email_body_html = markdown.markdown(email_body_markdown)
+        # TODO use override search-specific email to send emails to different addresses based on the search result
+        # TODO split out the markdown and html generation so it gets done per search maybe, depending on the email
+        # TODO rather than search name partitioning the search results, use email recipient?
+        mime_email = create_mime_email(email_body_markdown, email_body_html,
+                                       email_subject_text=configuration.get_config_value(
+                                           "email_settings.email_subject_text"),
+                                       email_sender=configuration.get_config_value("email_settings.email_sender"),
+                                       email_recipient=email_tuple[0])
+        # Send the MIME mail using the email_tools configuration, having already been authenticated
+        email_tools.send_mail(mime_email)
 
     # TODO configure the email client
     # TODO add scheduling system
@@ -160,16 +173,18 @@ def main(args):
     print(email_body_html)
 
 
-def run_search(logger_instance, reddit, search_dict, search_name, subreddits, search_string):
+def run_search(logger_instance, reddit, search_dict, email_recipient, search_name, subreddits, search_string):
     # Define a temporary multireddit and perform a search as documented on https://praw.readthedocs.io/en/latest/code_overview/reddit/subreddits.html
     searchListingGenerator = reddit.subreddit(subreddits).search(search_string, sort='new', time_filter='week')
     # https: // www.w3schools.com / python / python_dictionaries.asp
     for submission in searchListingGenerator:
+        if not (email_recipient in search_dict):
+            search_dict[email_recipient] = {}
         # make sure a nested submission dict exists in the value of the search dict https://www.programiz.com/python-programming/nested-dictionary
         # only add the key/value to the dict if this search returned any values
-        if not (search_name in search_dict):
-            search_dict[search_name] = {}
-        search_dict[search_name][submission.id] = submission
+        if not (search_name in search_dict[email_recipient]):
+            search_dict[email_recipient][search_name] = {}
+        search_dict[email_recipient][search_name][submission.id] = submission
         # TODO remove date formatting from here and just leave debug logs as link and/or title so we don't drag around the pytz
         logger_instance.debug('%s %s https://reddit.com%s',
                               to_zone.localize(datetime.fromtimestamp(submission.created_utc)).isoformat('T')

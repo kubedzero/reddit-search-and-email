@@ -3,7 +3,8 @@
         {
             "search_name":"first search",
             "subreddits":"redditdev+learnpython",
-            "search_params":"title:PRAW"
+            "search_params":"title:PRAW",
+            "email_recipient":"to_email_address@gmail.com"
         }
     ],
     "praw_client_id":"",
@@ -19,7 +20,7 @@
         {
             "email_subject_text": "New Reddit search results found",
             "email_sender": "from_email_address@gmail.com",
-            "email_receiver": "to_email_address@gmail.com",
+            "email_recipient": "to_email_address@gmail.com",
             "google_api_client_id": "",
             "google_api_client_secret": "",
             "google_refresh_token": ""
