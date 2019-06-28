@@ -72,14 +72,15 @@ class EmailTools:
                                            self.GOOGLE_REFRESH_TOKEN)
         return response['access_token'], response['expires_in']
 
-    def send_mail(self, mime_message):
+    def send_mail(self, mime_message_list):
         access_token, expires_in = self.refresh_authorization()
         auth_string = generate_oauth2_string(self.GOOGLE_ACCOUNT_EMAIL, access_token, as_base64=True)
         server = smtplib.SMTP('smtp.gmail.com:587')
         server.ehlo(self.GOOGLE_API_CLIENT_ID)
         server.starttls()
         server.docmd('AUTH', 'XOAUTH2 ' + auth_string)
-        server.sendmail(self.GOOGLE_ACCOUNT_EMAIL, mime_message["To"].split(","), mime_message.as_string())
+        for mime_message in mime_message_list:
+            server.sendmail(self.GOOGLE_ACCOUNT_EMAIL, mime_message["To"].split(","), mime_message.as_string())
         server.quit()
 
     def call_authorize_tokens(self, client_id, client_secret, authorization_code):
