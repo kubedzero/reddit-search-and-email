@@ -3,6 +3,8 @@
 from datetime import datetime
 
 from os import path
+import schedule
+import time
 
 from util.email_tools import EmailTools, create_mime_email
 
@@ -177,6 +179,16 @@ class SearchAndEmailExecutor:
 
         self.logger_instance = get_logger_with_name("Executor", self.console_log_level, self.file_log_filepath,
                                                     self.file_log_level)
+def run_loop(executor):
+    number_of_results = executor.execute_searches()
+    # Exit early if there are no results in the search dict
+    if number_of_results == 0:
+        # TODO expand this to be more verbose
+        print("no new search results found")
+        return
+    executor.generate_and_send_emails()
+    print("done")
+
 
 
 # TODO refactor logging and make this a class, then main can just call the class
@@ -212,14 +224,15 @@ def main(args):
     executor = SearchAndEmailExecutor(args,configuration)
     executor.initialize_praw()
     executor.initialize_email()
-    number_of_results = executor.execute_searches()
-    # Exit early if there are no results in the search dict
-    if number_of_results == 0:
-        # TODO expand this to be more verbose
-        print("no new search results found")
-        return
-    executor.generate_and_send_emails()
-    print("done")
+
+    schedule.every(30).minutes.do(run_loop(executor))
+
+    while True:
+        schedule.run_pending()
+        time.sleep(10)
+
+
+
 
     # TODO add scheduling system
     # TODO add argument for only running once and not scheduling
