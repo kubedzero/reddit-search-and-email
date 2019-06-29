@@ -21,9 +21,9 @@ cd "${0%/*}"
 # https://www.devdungeon.com/content/taking-command-line-arguments-bash
 # https://janakiev.com/til/python-background/
 # Run the script in the background and pass the bash arguments through (throwing away console output)
-nohup python3 ./search_runner.py "$@" > /dev/null &
+#nohup python3 ./search_runner.py "$@" > /dev/null &
+# https://superuser.com/questions/454907/how-to-execute-a-command-in-screen-and-detach
+# Run the script in a detached screen
+screen -S search_runner -dm python3 ./search_runner.py "$@"
 
-# Get the PID of the last-opened process
-PROCESS_PID=$!
-
-echo "Search runner started, its process ID is $PROCESS_PID. Use 'kill $PROCESS_PID' to terminate"
+echo "Search runner started in screen, its name is is 'search_runner. Use 'screen -S search_runner -X quit' to quit"
