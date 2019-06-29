@@ -12,6 +12,8 @@ import markdown
 import argparse
 # Used for getting the list of arguments with which the program was called
 import sys
+# Used for getting the directory path of this script
+import os
 
 from util.email_tools import EmailTools, create_mime_email
 from util.json_config_parser import JsonConfig
@@ -156,7 +158,8 @@ class SearchAndEmailExecutor:
 
         # Dedupe the search results with the stored previous results if the skip argument is false (not passed in)
         if not self._cli_args.skipdedupe:
-            self.__dedupe_and_write_search_results("./old_results.csv")
+            old_results_path = os.path.abspath(os.path.dirname(sys.argv[0])) + "/old_results.csv"
+            self.__dedupe_and_write_search_results(old_results_path)
 
         # Return the number of populated top level dicts. If 0 are returned there are no results (after dedupe)
         return len(self._search_result_dict)
@@ -192,7 +195,7 @@ class SearchAndEmailExecutor:
         self._cli_args = cli_args
         self._email_sender = configuration.get_config_value("email_settings.email_sender")
         self._console_log_level = configuration.get_config_value("logging.console_log_level")
-        self._file_log_filepath = configuration.get_config_value("logging.file_log_filepath")
+        self._file_log_filepath = configuration.get_config_value("logging.file_log_absolute_path")
         self._file_log_level = configuration.get_config_value("logging.file_log_level")
 
         self._logger_instance = get_logger_with_name("Executor", self._console_log_level, self._file_log_filepath,
@@ -230,8 +233,9 @@ def main(args):
     parser.add_argument('--onerun', '-o', help="Run search once and don't schedule further jobs", action='store_true')
     args = parser.parse_args()
 
-    # TODO test if default config path works if calling run.py from other locations
-    config_list = ["./default_base_config.json"]
+    # http://www.blog.pythonlibrary.org/2013/10/29/python-101-how-to-find-the-path-of-a-running-script/
+    default_config_absolute_path = os.path.abspath(os.path.dirname(sys.argv[0])) + "/default_base_config.json"
+    config_list = [default_config_absolute_path]
     # Add the passed-in config path if it is passed in
     if args.config is not None:
         config_list.insert(0,args.config)
@@ -240,7 +244,7 @@ def main(args):
     configuration = JsonConfig(config_list)
 
     console_log_level = configuration.get_config_value("logging.console_log_level")
-    file_log_filepath = configuration.get_config_value("logging.file_log_filepath")
+    file_log_filepath = configuration.get_config_value("logging.file_log_absolute_path")
     file_log_level = configuration.get_config_value("logging.file_log_level")
 
     logger_instance = get_logger_with_name("core", console_log_level, file_log_filepath, file_log_level)

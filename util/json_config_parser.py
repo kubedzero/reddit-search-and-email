@@ -102,7 +102,7 @@ class JsonConfig:
 
         config_console_log_level = self.get_config_value("logging.console_log_level")
         config_file_log_level = self.get_config_value("logging.file_log_level")
-        config_file_log_filepath = self.get_config_value("logging.file_log_filepath")
+        config_file_log_filepath = self.get_config_value("logging.file_log_absolute_path")
 
         self._logger_instance = get_logger_with_name(self._LOG_NAME, config_console_log_level, config_file_log_filepath,
                                                      config_file_log_level)

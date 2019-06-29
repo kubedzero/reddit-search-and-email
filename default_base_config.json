@@ -20,7 +20,7 @@
         {
             "file_log_level":"INFO",
             "console_log_level":"INFO",
-            "file_log_filepath":"./reddit-search-and-email.log"
+            "file_log_absolute_path":"./reddit-search-and-email.log"
         }
     ],
     "email_settings":[
