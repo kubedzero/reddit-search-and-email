@@ -4,3 +4,5 @@
  * Use a package manager like `pip3` to install [PRAW](https://praw.readthedocs.io/en/latest/getting_started/installation.html). Note that PRAW is a Python3 package so the matching version of pip must be used. 
  * Run with `pip3 install praw` and then `python3 get-updates.py`
  * Create an API in Reddit and copy the app key and secret key into the praw.ini file in the same directory as the python script
+ 
+ TODO https://phoenixnap.com/kb/how-to-install-python-3-centos-7 and mention adding it to bash profile so the shim gets installed on instantiation of bash

@@ -215,9 +215,9 @@ def run_loop(executor, logger_instance):
 
     # Consolidate the search results into emails and send them
     executor.generate_and_send_emails()
+    logger_instance.info("Scheduled run finished. Waiting until next run...")
 
 
-# TODO provide instructions for running this in the background (nohup, &, screen)
 # https://askubuntu.com/questions/396654/how-to-run-the-python-program-in-the-background-in-ubuntu-machine
 def main(args):
     # https://docs.python.org/3/library/argparse.html
@@ -269,7 +269,12 @@ def main(args):
                 schedule.run_pending()
                 logger_instance.debug("Sleeping until the next check for a pending scheduled job")
         except KeyboardInterrupt:
-            print('Interrupted by user! Exiting...')
+            message = 'Interrupted by user! Exiting...'
+            logger_instance.warn(message)
+            print(message)
+    else:
+        logger_instance.warn("Script was called with onerun argument and has run once. Exiting...")
+        return
 
 # https://stackoverflow.com/questions/419163/what-does-if-name-main-do
 # Call main(sys.argv[1:]) this file is run. Pass the arg array from element 1 onwards to exclude the program name arg
