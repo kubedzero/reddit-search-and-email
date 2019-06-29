@@ -149,7 +149,7 @@ class SearchAndEmailExecutor:
             if "email_recipient" in search_params:
                 email_recipient = search_params.get("email_recipient")
             else:
-                email_recipient = self._configuration.get_config_value("email_settings.email_recipient")
+                email_recipient = self._configuration.get_config_value("email_settings.default_email_recipient")
 
             self.__run_search(email_recipient, search_params.get("search_name"),search_params.get("subreddits"),
                               search_params.get("search_params"))
@@ -227,7 +227,7 @@ def main(args):
     # Interprets as true if passed in, false otherwise
     parser.add_argument('--skipdedupe', '-s', help="Skip deduping on existing results", action='store_true')
 
-    parser.add_argument('--runonce', '-o', help="Run search once and don't schedule further jobs", action='store_true')
+    parser.add_argument('--onerun', '-o', help="Run search once and don't schedule further jobs", action='store_true')
     args = parser.parse_args()
 
     # TODO test if default config path works if calling run.py from other locations
@@ -257,7 +257,7 @@ def main(args):
     # Run the search immediately
     run_loop(executor, logger_instance)
 
-    if not args.runonce:
+    if not args.onerun:
         try:
             # Loop forever, sleeping N seconds and then checking if any scheduled jobs need to be run
             while True:

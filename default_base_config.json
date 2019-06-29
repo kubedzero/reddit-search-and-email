@@ -4,7 +4,7 @@
             "search_name":"First Search for PRAW Mentions",
             "subreddits":"redditdev+learnpython",
             "search_params":"title:PRAW",
-            "email_recipient":"to_email_address@gmail.com"
+            "email_recipient":"to_email_address@gmail.com, asecondemailaddress@yahoo.com"
         },
         {
             "search_name":"Second Search",
@@ -26,8 +26,8 @@
     "email_settings":[
         {
             "email_subject_text":"New Reddit search results found",
+            "default_email_recipient":"to_email_address@gmail.com",
             "email_sender":"from_email_address@gmail.com",
-            "email_recipient":"to_email_address@gmail.com",
             "google_api_client_id":"",
             "google_api_client_secret":"",
             "google_refresh_token":""

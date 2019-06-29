@@ -95,7 +95,8 @@ class EmailTools:
         server.docmd('AUTH', 'XOAUTH2 ' + auth_string)
         for mime_message in mime_message_list:
             self._logger_instance.info("Sending email to: %s",mime_message["To"])
-            server.sendmail(self.GOOGLE_ACCOUNT_EMAIL, mime_message["To"].split(","), mime_message.as_string())
+            server.sendmail(self.GOOGLE_ACCOUNT_EMAIL, mime_message["To"].replace(" ", "").split(","),
+                        mime_message.as_string())
         server.quit()
 
     def call_authorize_tokens(self, client_id, client_secret, authorization_code):
