@@ -1,3 +1,15 @@
+"""
+Adapted from:
+https://blog.macuyiko.com/post/2016/how-to-send-html-mails-with-oauth2-and-gmail-in-python.html
+https://github.com/google/gmail-oauth2-tools/blob/master/python/oauth2.py
+https://developers.google.com/identity/protocols/OAuth2
+
+1. Generate and authorize an OAuth2 (generate_oauth2_token)
+2. Generate a new access tokens using a refresh token(refresh_token)
+3. Generate an OAuth2 string to use for login (access_token)
+4. Create MIME emails
+5. Send MIME emails
+"""
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from util.log_setup import get_logger_with_name
@@ -8,16 +20,6 @@ import smtplib
 import base64
 import time
 
-"""
-Adapted from:
-https://blog.macuyiko.com/post/2016/how-to-send-html-mails-with-oauth2-and-gmail-in-python.html
-https://github.com/google/gmail-oauth2-tools/blob/master/python/oauth2.py
-https://developers.google.com/identity/protocols/OAuth2
-
-1. Generate and authorize an OAuth2 (generate_oauth2_token)
-2. Generate a new access tokens using a refresh token(refresh_token)
-3. Generate an OAuth2 string to use for login (access_token)
-"""
 
 def url_escape(text):
     return urllib.parse.quote(text, safe='~-._')
@@ -79,6 +81,7 @@ class EmailTools:
         return json.loads(response)
 
     def refresh_authorization(self):
+        self._logger_instance.debug("Refreshing authorization with Client ID, Secret, and Refresh Token")
         response = self.call_refresh_token(self.GOOGLE_API_CLIENT_ID, self.GOOGLE_API_CLIENT_SECRET,
                                            self.GOOGLE_REFRESH_TOKEN)
         return response['access_token'], response['expires_in']
@@ -91,6 +94,7 @@ class EmailTools:
         server.starttls()
         server.docmd('AUTH', 'XOAUTH2 ' + auth_string)
         for mime_message in mime_message_list:
+            self._logger_instance.info("Sending email to: %s",mime_message["To"])
             server.sendmail(self.GOOGLE_ACCOUNT_EMAIL, mime_message["To"].split(","), mime_message.as_string())
         server.quit()
 
@@ -146,7 +150,7 @@ class EmailTools:
                                                "More details at {} and {}".format(url1,url2))
                 raise ValueError("Google Credentials are all empty and need to be filled")
 
-            # base values are populated but refresh token is empty, signifying we need to create it
+            # Base values are populated but refresh token is empty, signifying we need to create it
             self._logger_instance.info("Refresh token is empty, using Client ID and Secret to generate an auth link...")
             refresh_token, access_token, expires_in = self.get_authorization(google_api_client_id,
                                                                              google_api_client_secret)
@@ -159,9 +163,19 @@ class EmailTools:
             self.GOOGLE_REFRESH_TOKEN = refresh_token
 
         self._logger_instance.info("All Oauth2 credentials present. Checking for validity...")
-        # TODO add try catch to this so our own error gets thrown
-        access_token, expires_in = self.refresh_authorization()
+
+        # Initialize vars outside of try block
+        access_token, expires_in = [None] * 2
+
+        # Test the authorization getting and swallow any exception, rethrowing our own exception
+        try:
+            access_token, expires_in = self.refresh_authorization()
+        except Exception:
+            message = "Exception thrown during initialization; Getting authorization didn't work! Check credentials."
+            self._logger_instance.critical(message)
+            raise ValueError(message, Exception)
+
         if access_token != "" and expires_in > 0:
-            self._logger_instance.info("Credentials valid, returning EmailTools class")
+            self._logger_instance.info("Credentials valid! Returning EmailTools class")
         else:
             raise Exception("Oauth2 credentials invalid! Clear your Refresh token and reauthenticate")

@@ -28,19 +28,20 @@ def get_file_handler(log_file, log_level):
 def get_logger_with_name(log_name, log_level_console="INFO", log_filename="", log_level_file="INFO"):
 
     logger = logging.getLogger(log_name)
-    # with this pattern, it's rarely necessary to propagate the error up to parent
+    # With this pattern, it's rarely necessary to propagate the error up to parent
     logger.propagate = False
-    # set the root logger to the lowest level so its handlers set logging limits instead
+    # Set the root logger to the lowest level so its handlers set logging limits instead
     logger.setLevel(logging.DEBUG)
 
-    # if the logger was initialized earlier, an old handler might be hanging around. Remove it.
+    # If the logger was initialized earlier, an old handler might be hanging around. Remove it.
     for handler in logger.handlers:
         logger.removeHandler(handler)
 
     logger.addHandler(get_console_handler(log_level_console))
 
+    # Only add a Handler for file logging if the file path passed in is not empty
     if not log_filename == "":
-        logger.info("Adding handler for log file %s with log level %s", log_filename, log_level_file)
+        logger.debug("Adding handler for log file %s with log level %s", log_filename, log_level_file)
         logger.addHandler(get_file_handler(log_filename, log_level_file))
 
     return logger

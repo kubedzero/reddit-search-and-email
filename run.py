@@ -40,7 +40,7 @@ class SearchAndEmailExecutor:
         mime_email_list = []
         # Iterate through the search results, which at the top level are partitioned by email address recipient
         for email_tuple in self._search_result_dict.items():
-            self._logger_instance.info("Creating email Markdown and HTML for recipient: %s", email_tuple[0])
+            self._logger_instance.debug("Creating email Markdown and HTML for recipient: %s", email_tuple[0])
             email_body_markdown = construct_email_markdown(email_tuple[1])
             email_body_html = markdown.markdown(email_body_markdown)
             mime_email_list.append(create_mime_email(email_body_markdown, email_body_html,
@@ -110,6 +110,7 @@ class SearchAndEmailExecutor:
 
     # Run a single PRAW search and put the results into the class search_result_dict
     def __run_search(self, email_recipient, search_name, subreddits, search_string):
+        self._logger_instance.info("Running search: %s",search_name)
         # Define a temporary multireddit and perform a search as documented on https://praw.readthedocs.io/en/latest/code_overview/reddit/subreddits.html
         searchListingGenerator = self._reddit.subreddit(subreddits).search(search_string, sort='new', time_filter='week')
 
@@ -196,17 +197,17 @@ class SearchAndEmailExecutor:
 
         self._logger_instance = get_logger_with_name("Executor", self._console_log_level, self._file_log_filepath,
                                                      self._file_log_level)
+        self._logger_instance.info("Executor Initialized")
 
 
 # Method that repeatedly runs every interval, skipping over client and logger initialization
-def run_loop(executor):
+def run_loop(executor, logger_instance):
     # Get the number of results and populate the search_result_dict
     number_of_results = executor.execute_searches()
 
     # Exit early if there are no results in the search dict
     if number_of_results == 0:
-        # TODO expand this to be more verbose
-        print("no new search results found")
+        logger_instance.info("No new search results found.")
         return
 
     # Consolidate the search results into emails and send them
@@ -251,17 +252,18 @@ def main(args):
 
     # Set the interval to wait between running searches
     interval = configuration.get_config_value("search_interval_minutes")
-    schedule.every(interval).minutes.do(run_loop, executor)
+    schedule.every(interval).minutes.do(run_loop, executor, logger_instance)
 
     # Run the search immediately
-    run_loop(executor)
+    run_loop(executor, logger_instance)
 
     if not args.runonce:
         try:
-            # Loop forever, sleeping 10 seconds and then checking if any scheduled jobs need to be run
+            # Loop forever, sleeping N seconds and then checking if any scheduled jobs need to be run
             while True:
+                time.sleep(60)
                 schedule.run_pending()
-                time.sleep(10)
+                logger_instance.debug("Sleeping until the next check for a pending scheduled job")
         except KeyboardInterrupt:
             print('Interrupted by user! Exiting...')
 
