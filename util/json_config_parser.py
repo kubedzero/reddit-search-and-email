@@ -77,7 +77,6 @@ class JsonConfig:
 
             # Make sure our result is not empty or a list of only None
             # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
-            # TODO filter doesn't handle empty string. A quick fix was added but I need to test
             if len(list(filter(None, search_result))) != 0 or '' in search_result:
                 # For parsing ease by the caller, allow just a value to be returned if the result was a singleton list
                 if len(search_result) == 1 and simplify_singleton:
