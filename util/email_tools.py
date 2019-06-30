@@ -19,6 +19,8 @@ import json
 import smtplib
 import base64
 import time
+import sys
+import argparse
 
 
 def url_escape(text):
@@ -180,3 +182,23 @@ class EmailTools:
             self._logger_instance.info("Credentials valid! Returning EmailTools class")
         else:
             raise Exception("Oauth2 credentials invalid! Clear your Refresh token and reauthenticate")
+
+# Basic entry for getting a refresh token without going through the rest of the script
+if __name__ == "__main__":
+
+    # Set up the CLI parser
+    # https://stackoverflow.com/questions/24180527/argparse-required-arguments-listed-under-optional-arguments
+    parser = argparse.ArgumentParser(description='A program to set up Google/Gmail authentication')
+    parser.add_argument('--token', '-t', help="API Refresh Token", type=str)
+    requiredNamed = parser.add_argument_group('required named arguments')
+    requiredNamed.add_argument('--id', '-i', help="API Client ID", type=str, required=True)
+    requiredNamed.add_argument('--secret', '-s', help="API Client Secret", type=str, required=True)
+    args = parser.parse_args()
+
+    # If the token argument isn't passed in, use an empty string.
+    token = ""
+    if args.token is not None:
+        token = args.token
+
+    # Try to instantiate EmailTools with the provided values and generate a Refresh Token if one wasn't passed in
+    email_tools = EmailTools("email", args.id, args.secret, token, "DEBUG", "", "DEBUG")

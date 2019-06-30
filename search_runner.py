@@ -270,10 +270,10 @@ def main(args):
                 logger_instance.debug("Sleeping until the next check for a pending scheduled job")
         except KeyboardInterrupt:
             message = 'Interrupted by user! Exiting...'
-            logger_instance.warn(message)
+            logger_instance.warning(message)
             print(message)
     else:
-        logger_instance.warn("Script was called with onerun argument and has run once. Exiting...")
+        logger_instance.warning("Script was called with onerun argument and has run once. Exiting...")
         return
 
 # https://stackoverflow.com/questions/419163/what-does-if-name-main-do
