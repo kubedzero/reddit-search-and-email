@@ -1,0 +1,36 @@
+{
+    "searches":[
+        {
+            "search_name":"First Search for PRAW Mentions",
+            "subreddits":"redditdev+learnpython",
+            "search_params":"title:PRAW",
+            "email_recipient":"to_email_address@gmail.com, asecondemailaddress@yahoo.com"
+        },
+        {
+            "search_name":"Second Search",
+            "subreddits":"redditdev",
+            "search_params":"title:Python",
+            "email_recipient":"another_email_address@gmail.com"
+        }
+    ],
+    "search_interval_minutes":30,
+    "praw_client_id":"",
+    "praw_client_secret":"",
+    "logging":[
+        {
+            "file_log_level":"INFO",
+            "console_log_level":"INFO",
+            "file_log_absolute_path":"./reddit-search-and-email.log"
+        }
+    ],
+    "email_settings":[
+        {
+            "email_subject_text":"New Reddit search results found",
+            "default_email_recipient":"to_email_address@gmail.com",
+            "email_sender":"from_email_address@gmail.com",
+            "google_api_client_id":"",
+            "google_api_client_secret":"",
+            "google_refresh_token":""
+        }
+    ]
+}
