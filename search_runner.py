@@ -136,7 +136,8 @@ class SearchAndEmailExecutor:
 
         self._logger_instance.info('Result count is %d in subreddit [%s] using search [%s]',
                                    len(self._search_result_dict[email_recipient][search_name])
-                                   if search_name in self._search_result_dict[email_recipient] else 0,
+                                   if email_recipient in self._search_result_dict and
+                                      search_name in self._search_result_dict[email_recipient] else 0,
                                    subreddits, search_string)
 
     # Run and dedupe the searches according to the CLI arguments and configuration
