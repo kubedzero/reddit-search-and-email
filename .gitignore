@@ -128,3 +128,4 @@ dmypy.json
 .pyre/
 .DS_Store
 kz_config.json
+old_results.csv

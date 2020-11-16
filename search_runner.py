@@ -29,7 +29,7 @@ def construct_email_markdown(dict_of_searches_and_submissions):
         email_body_lines.append('### {}'.format(dict_entry_tuple[0]))
         # Add all the separate submissions as their titles with hyperlinks to the post
         for submission in dict_entry_tuple[1].values():
-            email_body_lines.append('* [{}](https://reddit.com{})'.format(submission.title, submission.permalink))
+            email_body_lines.append('- [{}](https://reddit.com{})'.format(submission.title, submission.permalink))
     # Aggregate the lines of markdown into a single string and return
     return "\n".join(email_body_lines)
 

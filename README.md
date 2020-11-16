@@ -21,10 +21,11 @@ Some of the technical offerings of the project are:
 * Configurable search schedule to check for new results
 * Stateful tracking of previous results sent out to prevent repeated content in emails
 * Minimal third party library dependencies
-  * [Markdown](https://github.com/Python-Markdown/markdown)
-  * [PRAW](https://github.com/praw-dev/praw)
-  * [schedule](https://github.com/dbader/schedule)
-  * [urllib3](https://github.com/urllib3/urllib3)
+  * Python 3 (tested with 3.8 on CentOS 8 and 3.9 on macOS)
+  * [Markdown](https://github.com/Python-Markdown/markdown) 3.3.3
+  * [PRAW](https://github.com/praw-dev/praw) 7.1.0
+  * [schedule](https://github.com/dbader/schedule) 0.6.0
+  * [urllib3](https://github.com/urllib3/urllib3) 1.26.2
 
 
 
@@ -41,6 +42,8 @@ Some of the technical offerings of the project are:
   * Finally, enabling the Python 3 installalation via adding it to the `PATH` can be done by launching an SCL shell with `scl enable rh-python36 bash`. 
   * I also added `scl enable rh-python36 bash` to the `~/.bash_profile` configuration file on the last line, after the `PATH` is set
   * [Here](https://phoenixnap.com/kb/how-to-install-python-3-centos-7) is a more comprehensive guide on how to do it
+* CentOS 8
+ * The default repositories installed seem to have Python. I ran `dnf install python38` after trying to run it for generic python and seeing `There are following alternatives for "python": python2, python36, python38`
 
 After setup, running `which python3` should return a valid executable
 
