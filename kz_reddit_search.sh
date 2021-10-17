@@ -8,4 +8,4 @@ set -euo pipefail
 cd "/root/reddit-search-and-email"
 
 # Using python3, call search_runner.py with the necessary args
-/usr/bin/python3 "/root/reddit-search-and-email/search_runner.py" --onerun --config "/root/reddit-search-and-email/kz_config.json"
+/root/.local/bin/pipenv run python3 "/root/reddit-search-and-email/search_runner.py" --onerun --config "/root/reddit-search-and-email/kz_config.json"
